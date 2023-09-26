@@ -21,13 +21,16 @@ struct ContentView: View {
     let context = CIContext()
     
     @State private var showingFilterSheet = false
+    @State private var processedImage: UIImage?
+
+    @State private var isSaveButtonDisabled = true
     
     var body: some View {
         NavigationView {
             VStack {
                 ZStack {
                     Rectangle()
-                        .fill(.secondary)
+                        .fill(Color.teal)
 
                     Text("Tap to select a picture")
                         .foregroundColor(.white)
@@ -59,6 +62,7 @@ struct ContentView: View {
                     Spacer()
 
                     Button("Save", action: save)
+                        .disabled(isSaveButtonDisabled)
                 
                 }
             }
@@ -87,11 +91,25 @@ struct ContentView: View {
         let beginImage = CIImage(image: inputImage)
         currentFilter.setValue(beginImage, forKey: kCIInputImageKey)
         applyProcessing()
+        isSaveButtonDisabled = false
+    
     }
     
     func save() {
+        guard let processedImage = processedImage else { return }
         
+        let imageSaver = ImageSaver()
+        imageSaver.successHandler = {
+            print("Success!")
+        }
+        
+        imageSaver.errorHandler = {
+            print("Oops: \($0.localizedDescription)")
+        }
+        
+        imageSaver.writeToPhotoAlbum(image: processedImage)
     }
+    
     func applyProcessing() {
         let inputKeys = currentFilter.inputKeys
 
@@ -104,6 +122,7 @@ struct ContentView: View {
         if let cgimg = context.createCGImage(outputImage, from: outputImage.extent) {
             let uiImage = UIImage(cgImage: cgimg)
             image = Image(uiImage: uiImage)
+            processedImage = uiImage
         }
     }
     func setFilter(_ filter: CIFilter) {
